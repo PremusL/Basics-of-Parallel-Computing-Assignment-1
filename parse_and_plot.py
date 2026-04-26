@@ -76,11 +76,16 @@ def generate_markdown_table(results, sizes, nprocs_list, title):
                 tp, speedup, efficiency = results[(size, p)]
                 print(f"| {size} | {p} | {tp:.4f} | {speedup:.2f} | {efficiency:.2f} |")
 
+def save_plot(fig, filename):
+    base_path = './figs/'
+    plt.tight_layout()
+    plt.savefig(base_path + filename)
+    plt.close(fig)
+    print(f"Saved plot to {filename}")
+
 def plot_metrics(results, sizes, nprocs_list, suffix, c_type):
-    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
-    
-    # Absolute Runtime
-    ax = axes[0]
+    # --- Absolute Runtime ---
+    fig, ax = plt.subplots(figsize=(7, 5))
     for size in sizes:
         valid_procs = [p for p in nprocs_list if (size, p) in results]
         times = [results[(size, p)][0] for p in valid_procs]
@@ -90,39 +95,41 @@ def plot_metrics(results, sizes, nprocs_list, suffix, c_type):
     ax.set_title(f'Absolute Running Time ({c_type})')
     ax.legend()
     ax.grid(True)
-    
-    # Relative Speed-up
-    ax = axes[1]
+    ax.set_xticks(nprocs_list)
+    save_plot(fig, f'benchmark_plots_{suffix}_runtime.png')
+
+    # --- Relative Speed-up ---
+    fig, ax = plt.subplots(figsize=(7, 5))
     for size in sizes:
         valid_procs = [p for p in nprocs_list if (size, p) in results]
         speedups = [results[(size, p)][1] for p in valid_procs]
         ax.plot(valid_procs, speedups, marker='o', label=f'size={size}')
-    # Add ideal speedup line
     ax.plot(nprocs_list, nprocs_list, 'k--', label='Ideal Speed-up')
     ax.set_xlabel('Number of Cores')
     ax.set_ylabel('Relative Speed-up')
     ax.set_title(f'Relative Speed-up ({c_type})')
     ax.legend()
     ax.grid(True)
+    ax.set_xticks(nprocs_list)
     
-    # Parallel Efficiency
-    ax = axes[2]
+    save_plot(fig, f'benchmark_plots_{suffix}_speedup.png')
+
+    # --- Parallel Efficiency ---
+    fig, ax = plt.subplots(figsize=(7, 5))
     for size in sizes:
         valid_procs = [p for p in nprocs_list if (size, p) in results]
         efficiencies = [results[(size, p)][2] for p in valid_procs]
         ax.plot(valid_procs, efficiencies, marker='o', label=f'size={size}')
-    # Add ideal efficiency line
     ax.axhline(y=1.0, color='k', linestyle='--', label='Ideal Efficiency')
     ax.set_xlabel('Number of Cores')
     ax.set_ylabel('Parallel Efficiency')
     ax.set_title(f'Parallel Efficiency ({c_type})')
     ax.legend()
     ax.grid(True)
+    ax.set_xticks(nprocs_list)
     
-    plt.tight_layout()
-    plot_file = f'benchmark_plots_{suffix}.png'
-    plt.savefig(plot_file)
-    print(f"Saved plot to {plot_file}")
+    save_plot(fig, f'benchmark_plots_{suffix}_efficiency.png')
+
 
 def process_dat_file(dat_file, nprocs_list, sizes):
     """Parse a .dat file, compute metrics, save CSV, print table, and generate plots."""
