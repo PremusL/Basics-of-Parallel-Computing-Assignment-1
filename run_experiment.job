@@ -19,18 +19,18 @@
 # OUTFILE="output_exp22_2_${SLURM_JOB_ID}.dat"
 
 # Exercise 2.3
- NPROCS=(32)
- SIZE=(880)
- PATCH=(1 5 10 20 55 150 400)
- BENCHMARK_SET=0    # c_s
- OUTFILE="output_exp23_${SLURM_JOB_ID}.dat"
+# NPROCS=(32)
+# SIZE=(880)
+# PATCH=(1 5 10 20 55 150 400)
+# BENCHMARK_SET=0    # c_s
+# OUTFILE="output_exp23_${SLURM_JOB_ID}.dat"
 
 # Exercise 2.4
-# NPROCS=(20)
-# SIZE=(900)
-# PATCH=({20..60})
-# BENCHMARK_SET=0    # c_s
-# OUTFILE="output_exp24_${SLURM_JOB_ID}.dat"
+ NPROCS=(20)
+ SIZE=(900)
+ PATCH=({20..60})
+ BENCHMARK_SET=0    # c_s
+ OUTFILE="output_exp24_${SLURM_JOB_ID}.dat"
 
 NREP=3
 BINARY="python3 ./julia_par.py"
