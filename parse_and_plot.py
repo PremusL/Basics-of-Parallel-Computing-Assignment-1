@@ -1,11 +1,11 @@
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import numpy as np
-from collections import defaultdict
 import os
 import glob
 import csv
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+from collections import defaultdict
+matplotlib.use('Agg') # Using Anti-Grain Geometry
 
 def find_latest_file(pattern):
     """Find the most recently modified file matching the pattern."""
@@ -14,12 +14,11 @@ def find_latest_file(pattern):
         return None
     return max(files, key=os.path.getmtime)
 
-def parse_dat_file(filename):
+def parse_calc_means(filename):
     if not filename or not os.path.exists(filename):
         print(f"File {filename} not found.")
         return None
 
-    print(f"Parsing {filename}...")
     data = defaultdict(list)
     with open(filename, 'r') as f:
         for line in f:
@@ -58,23 +57,12 @@ def save_to_csv(results, sizes, nprocs_list, filename):
     print(f"Saving results to {filename}...")
     with open(filename, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        # Header matching the user request: size p mean runtime (s) speed-up par. eff.
         writer.writerow(['size', 'p', 'runtime', 'speedup', 'efficiency'])
         for size in sizes:
             for p in nprocs_list:
                 if (size, p) in results:
                     tp, speedup, efficiency = results[(size, p)]
                     writer.writerow([size, p, f"{tp:.4f}", f"{speedup:.2f}", f"{efficiency:.2f}"])
-
-def generate_markdown_table(results, sizes, nprocs_list, title):
-    print(f"\n### {title}")
-    print("| Size | Cores | Mean Runtime (s) | Speed-up | Parallel Efficiency |")
-    print("|---|---|---|---|---|")
-    for size in sizes:
-        for p in nprocs_list:
-            if (size, p) in results:
-                tp, speedup, efficiency = results[(size, p)]
-                print(f"| {size} | {p} | {tp:.4f} | {speedup:.2f} | {efficiency:.2f} |")
 
 def save_plot(fig, filename):
     base_path = './figs/'
@@ -84,7 +72,8 @@ def save_plot(fig, filename):
     print(f"Saved plot to {filename}")
 
 def plot_metrics(results, sizes, nprocs_list, suffix, c_type):
-    # --- Absolute Runtime ---
+    benchmark_bool = "benchmark" in c_type
+    # Absolute Runtime
     fig, ax = plt.subplots(figsize=(7, 5))
     for size in sizes:
         valid_procs = [p for p in nprocs_list if (size, p) in results]
@@ -92,13 +81,17 @@ def plot_metrics(results, sizes, nprocs_list, suffix, c_type):
         ax.plot(valid_procs, times, marker='o', label=f'size={size}')
     ax.set_xlabel('Number of Cores')
     ax.set_ylabel('Running Time (s)')
-    ax.set_title(f'Absolute Running Time ({c_type})')
+    if (benchmark_bool):
+        ax.set_title(f'Absolute Running Time (c_b)')
+    else: 
+        ax.set_title(f'Absolute Running Time (c_s)')
+    
     ax.legend()
     ax.grid(True)
     ax.set_xticks(nprocs_list)
     save_plot(fig, f'benchmark_plots_{suffix}_runtime.png')
 
-    # --- Relative Speed-up ---
+    # Relative Speed-up
     fig, ax = plt.subplots(figsize=(7, 5))
     for size in sizes:
         valid_procs = [p for p in nprocs_list if (size, p) in results]
@@ -107,14 +100,18 @@ def plot_metrics(results, sizes, nprocs_list, suffix, c_type):
     ax.plot(nprocs_list, nprocs_list, 'k--', label='Ideal Speed-up')
     ax.set_xlabel('Number of Cores')
     ax.set_ylabel('Relative Speed-up')
-    ax.set_title(f'Relative Speed-up ({c_type})')
+    if (benchmark_bool):
+        ax.set_title(f'Relative Speed-up (c_b)')
+    else: 
+        ax.set_title(f'Relative Speed-up (c_s)')
+
     ax.legend()
     ax.grid(True)
     ax.set_xticks(nprocs_list)
     
     save_plot(fig, f'benchmark_plots_{suffix}_speedup.png')
 
-    # --- Parallel Efficiency ---
+    # Parallel Efficiency
     fig, ax = plt.subplots(figsize=(7, 5))
     for size in sizes:
         valid_procs = [p for p in nprocs_list if (size, p) in results]
@@ -123,7 +120,11 @@ def plot_metrics(results, sizes, nprocs_list, suffix, c_type):
     ax.axhline(y=1.0, color='k', linestyle='--', label='Ideal Efficiency')
     ax.set_xlabel('Number of Cores')
     ax.set_ylabel('Parallel Efficiency')
-    ax.set_title(f'Parallel Efficiency ({c_type})')
+    if (benchmark_bool):
+        ax.set_title(f'Parallel Efficiency (c_b)')
+    else: 
+        ax.set_title(f'Parallel Efficiency (c_s)')
+
     ax.legend()
     ax.grid(True)
     ax.set_xticks(nprocs_list)
@@ -131,14 +132,14 @@ def plot_metrics(results, sizes, nprocs_list, suffix, c_type):
     save_plot(fig, f'benchmark_plots_{suffix}_efficiency.png')
 
 
-def process_dat_file(dat_file, nprocs_list, sizes):
+def process_dat_file(dat_file):
     """Parse a .dat file, compute metrics, save CSV, print table, and generate plots."""
-    means = parse_dat_file(dat_file)
+    means = parse_calc_means(dat_file)
     if means is None:
         return
 
-    found_sizes = sorted(set(s for s, _ in means.keys()))
-    found_nprocs = sorted(set(p for _, p in means.keys()))
+    found_sizes = sorted(set(s for s, p in means.keys()))
+    found_nprocs = sorted(set(p for s, p in means.keys()))
 
     results = calculate_metrics(means, found_sizes, found_nprocs)
 
@@ -147,7 +148,6 @@ def process_dat_file(dat_file, nprocs_list, sizes):
     csv_file = f"results_{suffix}.csv"
     plot_file_suffix = suffix
 
-    generate_markdown_table(results, found_sizes, found_nprocs, f"Table for {basename}")
     save_to_csv(results, found_sizes, found_nprocs, csv_file)
     plot_metrics(results, found_sizes, found_nprocs, plot_file_suffix, basename)
 
@@ -164,8 +164,6 @@ if __name__ == "__main__":
         print(f"Found {len(dat_files)} data file(s): {dat_files}\n")
         for dat_file in dat_files:
             print(f"{'='*60}")
-            process_dat_file(dat_file, nprocs_list, sizes)
+            process_dat_file(dat_file)
             print()
 
-
-# uv run --with matplotlib --with numpy python3 parse_and_plot.py

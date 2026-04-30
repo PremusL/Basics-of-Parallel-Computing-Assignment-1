@@ -51,7 +51,7 @@ def compute_patch(task_args):
     patch_w = min(patch, size - x)
     patch_h = min(patch, size - y)
 
-    subimage = np.zeros((patch_w, patch_h))
+    patchimage = np.zeros((patch_w, patch_h))
     for ix in range(patch_w):
         for iy in range(patch_h):
             nit = 0
@@ -63,11 +63,11 @@ def compute_patch(task_args):
                 z = z**2 + c
                 nit += 1
             ratio = nit / nit_max
-            subimage[ix,iy] = ratio
+            patchimage[ix,iy] = ratio
 
-    return x, y, subimage
+    return x, y, patchimage
 
-def compute_julia_in_parallel(size, xmin, xmax, ymin, ymax, patch, nprocs, c):
+def compute_julia_parallel(size, xmin, xmax, ymin, ymax, patch, nprocs, c):
     meta_info = (size, xmin, xmax, ymin, ymax, c)
     task_list = []
     
@@ -80,9 +80,9 @@ def compute_julia_in_parallel(size, xmin, xmax, ymin, ymax, patch, nprocs, c):
         
     julia_img = np.zeros((size, size))
     for p in completed_patches:
-        x, y, subimage = p
-        patch_w, patch_h = subimage.shape
-        julia_img[x:x+patch_w, y:y+patch_h] = subimage
+        x, y, patchimage = p
+        patch_w, patch_h = patchimage.shape
+        julia_img[x:x+patch_w, y:y+patch_h] = patchimage
 
     return julia_img
 
@@ -118,7 +118,7 @@ if __name__ == "__main__":
         c = c_from_group(GROUP_SIZE, GROUP_NUMBER) 
 
     stime = time.perf_counter()
-    julia_img = compute_julia_in_parallel(
+    julia_img = compute_julia_parallel(
         args.size,
         args.xmin, args.xmax, 
         args.ymin, args.ymax, 
